@@ -1,4 +1,5 @@
 .loading {
+  display: none !important;
 }
 
 .hidden {

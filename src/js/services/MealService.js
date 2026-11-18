@@ -4,6 +4,7 @@ import { Meal } from '../models/Meal.js';
 export class MealService extends ApiService {
   constructor(baseUrl) {
     super(baseUrl);
+    this.apiKey = 'xRGnhxcXrKuX8hJpeeQE5Rac9b7dyQDpaMs5fWFL';
   }
 
   // Get meals (default 25 meals or search by name)
@@ -50,5 +51,32 @@ export class MealService extends ApiService {
   async getAreas() {
     const data = await this.get('/meals/areas');
     return data.results || [];
+  }
+
+  // Analyze nutrition for a recipe using its ingredients
+  async analyzeRecipeNutrition(recipeName, ingredients) {
+    try {
+      const response = await fetch(`${this.baseUrl}/nutrition/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey
+        },
+        body: JSON.stringify({
+          recipeName: recipeName,
+          ingredients: ingredients
+        })
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const result = await response.json();
+      return result.data || null;
+    } catch (error) {
+      console.error('Nutrition analyze error:', error.message);
+      return null;
+    }
   }
 }
