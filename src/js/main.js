@@ -6,6 +6,7 @@ import { MealDetailsPage } from './pages/MealDetailsPage.js';
 import { FoodLogPage } from './pages/FoodLogPage.js';
 import { ProductService } from './services/ProductService.js';
 import { ProductScannerPage } from './pages/ProductScannerPage.js';
+import { Router } from './router/Router.js';
 
 console.log('NutriPlan initialized.');
 
@@ -13,6 +14,9 @@ console.log('NutriPlan initialized.');
 const mealService = new MealService(API_BASE_URL);
 const foodLogService = new FoodLogService();
 const productService = new ProductService(API_BASE_URL);
+
+// Router instance
+const router = new Router();
 
 // Pages
 let homePage = null;
@@ -57,15 +61,12 @@ function showSection(sectionName) {
 
 // When a meal card is clicked on HomePage
 function handleMealSelect(mealId) {
-  showSection('meal-details');
-  if (mealDetailsPage) {
-    mealDetailsPage.loadMeal(mealId);
-  }
+  router.navigate('/meal/' + mealId);
 }
 
 // When back button is clicked in MealDetailsPage
 function handleBackToMeals() {
-  showSection('home');
+  router.navigate('/home');
 }
 
 // When "Log This Meal" is clicked in MealDetailsPage
@@ -122,16 +123,10 @@ function setupNavigation() {
     link.addEventListener('click', (e) => {
       e.preventDefault();
 
-      // Update active styling
-      navLinks.forEach(l => {
-        l.className = 'nav-link flex items-center gap-3 px-3 py-2.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-all';
-      });
-      link.className = 'nav-link flex items-center gap-3 px-3 py-2.5 bg-emerald-50 text-emerald-700 rounded-lg transition-all font-semibold';
-
-      // Index 0: Meals & Recipes, Index 1: Product Scanner, Index 2: Food Log
-      if (index === 0) showSection('home');
-      else if (index === 1) showSection('products');
-      else if (index === 2) showSection('foodlog');
+      // Navigate via Router
+      if (index === 0) router.navigate('/home');
+      else if (index === 1) router.navigate('/scanner');
+      else if (index === 2) router.navigate('/foodlog');
     });
   });
 
@@ -165,6 +160,8 @@ function setupNavigation() {
 if (typeof window !== 'undefined') {
   window.mealService = mealService;
   window.foodLogService = foodLogService;
+  window.productService = productService;
+  window.router = router;
   window.showSection = showSection;
 
   // Hide the app loading overlay
@@ -173,9 +170,6 @@ if (typeof window !== 'undefined') {
     appLoader.classList.add('hidden');
     appLoader.style.display = 'none';
   }
-
-  // Show home section by default
-  showSection('home');
 
   // Setup sidebar links
   setupNavigation();
@@ -189,22 +183,44 @@ if (typeof window !== 'undefined') {
   mealDetailsPage = new MealDetailsPage(mealService, handleBackToMeals, handleLogMeal);
   window.mealDetailsPage = mealDetailsPage;
 
+  // Initialize ProductScannerPage
   productScannerPage = new ProductScannerPage(productService, handleLogProduct);
   productScannerPage.init();
   window.productScannerPage = productScannerPage;
 
   // Initialize FoodLogPage
   foodLogPage = new FoodLogPage(foodLogService, (targetSection) => {
-    // If quick-log buttons navigate:
-    const navLinks = document.querySelectorAll('#sidebar .nav-link');
-    if (targetSection === 'home' && navLinks[0]) {
-      navLinks[0].click();
-    } else if (targetSection === 'products' && navLinks[1]) {
-      navLinks[1].click();
+    if (targetSection === 'home') {
+      router.navigate('/home');
+    } else if (targetSection === 'products' || targetSection === 'scanner') {
+      router.navigate('/scanner');
     } else {
-      showSection(targetSection);
+      router.navigate('/' + targetSection);
     }
   });
   foodLogPage.init();
   window.foodLogPage = foodLogPage;
+
+  // Register application routes
+  router.addRoute('/home', () => {
+    showSection('home');
+  });
+
+  router.addRoute('/meal/:id', (params) => {
+    showSection('meal-details');
+    if (mealDetailsPage) {
+      mealDetailsPage.loadMeal(params.id);
+    }
+  });
+
+  router.addRoute('/foodlog', () => {
+    showSection('foodlog');
+  });
+
+  router.addRoute('/scanner', () => {
+    showSection('products');
+  });
+
+  // Start routing (matches initial URL & handles Back/Forward popstate)
+  router.start();
 }
